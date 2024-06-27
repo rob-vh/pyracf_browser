@@ -2,7 +2,7 @@
 
 ## installation steps
 
-This web app is constructed with [streamlit](https://streamlit.io/)), so make sure you have this installed:
+This web app is constructed with [streamlit](https://streamlit.io/), so make sure you have this installed:
 
 `pip3 install streamlit`
 
