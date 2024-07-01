@@ -1,0 +1,5 @@
+pyracf_path = "/home/rob/Documents/henri/pyracf-dev-0.9/src/"
+unload = "/home/rob/Documents/henri/synthetic.unload"
+
+[track]
+time = "comment this line to stop track messages"
