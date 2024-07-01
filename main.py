@@ -204,7 +204,8 @@ with header:
         sum_skip_datafields.update(p['skip_datafields'])
 
     st.header(f"pyracf: {select_entity}s")
-    st.text(f'{df.shape[0]} records: {select_keys} {sum_select_datafields} not{sum_skip_datafields}')
+    if input_table:
+        st.text(f'{df.shape[0]} records: {select_keys} {sum_select_datafields} not{sum_skip_datafields}')
 
 with output_frame:
     if input_table:

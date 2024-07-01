@@ -8,9 +8,9 @@ This web app is constructed with [streamlit](https://streamlit.io/), so make sur
 
 Also, the most recent version of pyracf is needed (not the one from pypi), so install from [github](https://github.com/rob-vh/pyracf)
 
-After installing this pyracf, edit file pyracf_browser/main.py:
+After installing this pyracf, edit file main.toml:
 
-* specify the path to pyracf
+* specify the path to pyracf (unless you have pyracf installed from a fully fledged pypi, then leave this value empty)
 
 * specify a path to a RACF (IRRDBU00) unload file
 
