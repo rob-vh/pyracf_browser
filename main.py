@@ -25,8 +25,9 @@ def track(*stage):
         print(f"{t-config['track']['time']:.6f}",*stage)
         config['track']['time'] = t
     return
+track('tracker installed')
 
-@st.cache_data
+@st.cache_resource
 def get_RACF(*args,**kwds):
     import sys, time
     if config['pyracf_path'] and config['pyracf_path'] not in sys.path:

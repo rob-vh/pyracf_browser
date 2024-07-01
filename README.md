@@ -10,7 +10,7 @@ Also, the most recent version of pyracf is needed (not the one from pypi), so in
 
 After installing this pyracf, edit file main.toml:
 
-* specify the path to pyracf (unless you have pyracf installed from a fully fledged pypi, then leave this value empty)
+* specify the path to pyracf (unless you have pyracf installed from a fully fledged pypi, then leave this value empty or comment it out)
 
 * specify a path to a RACF (IRRDBU00) unload file
 
