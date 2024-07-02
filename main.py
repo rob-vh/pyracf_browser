@@ -101,8 +101,12 @@ with select_frame:
                     hide_segment = False
                 else:
                     # initially show only base segment (sindex==0)
+                    if sindex!=0:
+                        if select_entity+'_open_'+segment not in st.session_state: st.session_state[select_entity+'_open_'+segment] = False
+                        open_segment = st.toggle('open segment tab',key=select_entity+'_open_'+segment)
+                        if not open_segment: continue  # skip segment field elements
                     if select_entity+'_hide_'+segment not in st.session_state: st.session_state[select_entity+'_hide_'+segment] = (sindex!=0)
-                    hide_segment = st.toggle('hide',key=select_entity+'_hide_'+segment)
+                    hide_segment = st.toggle('hide output columns',key=select_entity+'_hide_'+segment)
 
                 if sindex==0:  # base segment, field names without prefix
                     rubbish = ['RECORD_TYPE','NAME','CLASS_NAME','CLASS','ALTER_CNT','CONTROL_CNT','UPDATE_CNT','READ_CNT','LASTREF_DATE']
@@ -114,13 +118,12 @@ with select_frame:
                     input_table = segments[select_entity][segment]
                     rubbish = ['RECORD_TYPE','NAME','CLASS_NAME','CLASS']
                     columns = [c for c in r.table(input_table).columns if c.split('_',1)[1] not in rubbish]
-                hide_columns = [c for c in r.table(input_table).columns if c.split('_',1)[0]==input_table and c.split('_',1)[1] in rubbish]
+                hide_columns = [c for a,b,c in [c.split('_',1)+[c] for c in r.table(input_table).columns] if a==input_table and b in rubbish]
                 select_datafields = {}
                 skip_datafields = {}
 
                 track('start with columns')
                 for c in columns:
-                    if c[0:15]=='USOPR_ROUTECODE':continue  # 128 fields!
                     with make_stylable(st.container(),
                         css_key="compound_header",
                         css_styles="""
@@ -163,6 +166,7 @@ with select_frame:
             final_processing.append({'table': input_table,
                                      'segment': segment,
                                      'hide': hide_segment,
+                                     'columns': columns,
                                      'hide_columns': hide_columns,
                                      'select_keys': select_keys,
                                      'select_datafields': select_datafields,
@@ -176,9 +180,10 @@ for p in final_processing:
         if p['hide']:  # hide whole segment, but we need to do select/skip
             columns = needed_columns
         elif p['hide_columns']:
-            columns = [c for c in r.table(p['table']).columns if c in needed_columns or c not in p['hide_columns']]
+            columns = [c for c in p['columns'] if c not in p['hide_columns']]
+            columns.extend([c for c in needed_columns if c not in columns])
         else:
-            columns = slice(None)
+            columns = p['columns']
         if input_table=='':  # first useful table
             input_table = p['table']
             df = r.table(p['table'])[columns]
