@@ -1,6 +1,7 @@
 import streamlit as st
 from make_stylable import make_stylable
 import time
+import pandas as pd
 
 def MaybeUpper(text):
     '''relies on global (result of a switch) var mixedcase to apply upper() to selection values'''
@@ -47,6 +48,7 @@ def get_RACF(*args,**kwds):
 r = get_RACF(config['unload'])
 
 from field_spec import entity_key_selector, entity_data_selector, segment_getter, system_profile_getter
+from action_spec import entity_action_names, action_driver
 
 @st.cache_data
 def get_segment_defs():
@@ -171,12 +173,6 @@ with select_frame:
             }
             """)
         with cs:
-            if len(query_segments)==1:
-                show_segment = True
-            else:
-                if select_entity+'_show_'+segment not in st.session_state: st.session_state[select_entity+'_show_'+segment] = (segment=='base')
-                show_segment = st.toggle('show segment on output',key=select_entity+'_show_'+segment)
-
             if segment=='base':  # base segment, field names without prefix
                 rubbish = ['RECORD_TYPE','NAME','CLASS_NAME','CLASS','ALTER_CNT','CONTROL_CNT','UPDATE_CNT','READ_CNT','LASTREF_DATE']
                 if select_entity in entity_data_selector:  # preferred fields listed
@@ -190,6 +186,21 @@ with select_frame:
             hide_columns = [c for a,b,c in [c.split('_',1)+[c] for c in r.table(input_table).columns] if a==input_table and b in rubbish]
             select_datafields = {}
             skip_datafields = {}
+
+            if len(query_segments)==1:
+                show_segment = True
+                c2 = st.container()
+            else:
+                c1,c2 = st.columns(2)
+                if select_entity+'_show_'+segment not in st.session_state: st.session_state[select_entity+'_show_'+segment] = (segment=='base')
+                show_segment = c1.toggle('show segment',key=select_entity+'_show_'+segment)
+
+            def reset_columns(reset,columns):
+                for c in columns:
+                    st.session_state[select_entity+'_show_'+c] = reset
+            if select_entity+'_show_all_cols_'+segment not in st.session_state: st.session_state[select_entity+'_show_all_cols_'+segment] = True
+            show_all_cols = c2.toggle('show all cols',key=select_entity+'_show_all_cols_'+segment,
+                on_change=reset_columns,args=(not st.session_state[select_entity+'_show_all_cols_'+segment],columns))
 
             track('start with columns')
             for c in columns:
@@ -261,6 +272,13 @@ for p in query_segments.values():
 
 track('frame ready')
 
+@st.experimental_dialog('action results',width='large')
+def action_frame(frame):
+    result = action_driver(r,select_entity,df.iloc[frame['selection']['rows']].index,row_action)
+    if isinstance(result,pd.DataFrame):
+        st.dataframe(result)
+        print('result',result.shape)
+
 with header:
     st.header(f"pyracf: {select_entity}s")
     if input_table:
@@ -272,8 +290,13 @@ with header:
             if 'skip_datafields' in p:
                 sum_skip_datafields.update(p['skip_datafields'])
         st.text(f'{df.shape[0]} records: {select_keys} {sum_select_datafields} not{sum_skip_datafields}')
+        if select_entity in entity_action_names:
+            row_action = st.selectbox('Select action and select one or more table rows',entity_action_names[select_entity])
 
 with output_frame:
     if input_table:
-        st.dataframe(df)
+        frame = st.dataframe(df, on_select="rerun", selection_mode="multi-row")
+        if len(frame['selection']['rows'])>0 and row_action:
+            print(frame)
+            action_frame(frame)
 
