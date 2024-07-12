@@ -272,12 +272,22 @@ for p in query_segments.values():
 
 track('frame ready')
 
+# dialog window for actions on selected profiles
 @st.experimental_dialog('action results',width='large')
-def action_frame(frame):
-    result = action_driver(r,select_entity,df.iloc[frame['selection']['rows']].index,row_action)
-    if isinstance(result,pd.DataFrame):
-        st.dataframe(result)
-        print('result',result.shape)
+def action_frame(df,frame):
+    selected_rows = df.iloc[frame['selection']['rows']].index
+    print(selected_rows)
+    if len(selected_rows)==1:
+        profiles = selected_rows[0]
+    elif selected_rows.ndim==1:
+        profiles = ','.join(selected_rows)
+    else:
+        profiles = 'selected profiles'
+    action = st.selectbox('Select action for '+profiles, entity_action_names[select_entity],key='action_select')
+    if action:
+        result = action_driver(r, select_entity, selected_rows, action)
+        if isinstance(result,pd.DataFrame):
+            st.dataframe(result, use_container_width=True, key='action_frame')
 
 with header:
     st.header(f"pyracf: {select_entity}s")
@@ -290,13 +300,12 @@ with header:
             if 'skip_datafields' in p:
                 sum_skip_datafields.update(p['skip_datafields'])
         st.text(f'{df.shape[0]} records: {select_keys} {sum_select_datafields} not{sum_skip_datafields}')
-        if select_entity in entity_action_names:
-            row_action = st.selectbox('Select action and select one or more table rows',entity_action_names[select_entity])
 
 with output_frame:
     if input_table:
-        frame = st.dataframe(df, on_select="rerun", selection_mode="multi-row")
-        if len(frame['selection']['rows'])>0 and row_action:
-            print(frame)
-            action_frame(frame)
+        frame = st.dataframe(df, on_select="rerun", selection_mode="multi-row", use_container_width=True)
+        if select_entity in entity_action_names:
+            go_action = st.button('Select one or more table rows and press button')
+        if go_action and len(frame['selection']['rows'])>0:
+            action_frame(df,frame)
 
