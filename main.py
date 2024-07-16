@@ -288,7 +288,7 @@ def action_frame(df,frame):
         profiles = ', '.join(selected_rows.get_level_values(keyNum)).replace('*','\*')
     action = st.selectbox('Select action for '+profiles, entity_action_names[select_entity],key=select_entity+'_action_select')
     if action:
-        result = action_driver(r, select_entity, selected_rows, action)
+        result = action_driver(r, select_entity, selected_rows, action, df if select_entity=='system profile' else None)
         if isinstance(result,pd.DataFrame):
             st.dataframe(result, use_container_width=True, key='action_frame')
 

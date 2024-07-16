@@ -33,6 +33,7 @@ def join_general_permits(r,index):
 
 entity_actions = {
 'group': {
+    'details': lambda r,index: r.groups.find(index).stripPrefix().T,
     'connects': lambda r,index: r.connectData.find(index).stripPrefix().pipe(connectAttributes),
     'connect matrix': lambda r,index: r.connectData.find(index).stripPrefix().pipe(connectAttributes).pivot(index='GRP_ID',columns='NAME',values='attribs').fillna(''),
     'connect matrix T': lambda r,index: r.connectData.find(index).stripPrefix().pipe(connectAttributes).pivot(index='NAME',columns='GRP_ID',values='attribs').fillna(''),
@@ -40,6 +41,7 @@ entity_actions = {
     'permits on general resources': lambda r,index: join_general_permits_for_id(r,index),
     },
 'user':  {
+    'details': lambda r,index: r.users.find(index).stripPrefix().T,
     'connects': lambda r,index: r.connectData.loc[(slice(None),index),].stripPrefix().pipe(connectAttributes),
     'connect matrix': lambda r,index: r.connectData.loc[(slice(None),index),].stripPrefix().pipe(connectAttributes).pivot(index='NAME',columns='GRP_ID',values='attribs').fillna(''),
     'connect matrix T': lambda r,index: r.connectData.loc[(slice(None),index),].stripPrefix().pipe(connectAttributes).pivot(index='GRP_ID',columns='NAME',values='attribs').fillna(''),
@@ -48,7 +50,11 @@ entity_actions = {
     'data sets in scope': lambda r,index: join_dataset_permits_for_id(r,join_connect_groups_for_users(r,index)).acl(resolve=True).find(user=index),
     'general resources in scope': lambda r,index: join_general_permits_for_id(r,join_connect_groups_for_users(r,index)).acl(resolve=True).find(user=index),
     },
+'connect': {
+    'details': lambda r,index: r.connectData.loc[index].stripPrefix().T,
+    },
 'dataset': {
+    'details': lambda r,index: r.datasets.find(index).stripPrefix().T,
     'permits':     join_dataset_permits,
     'access matrix': lambda r,index: r.datasets.loc[index].acl().pivot(index='NAME',columns='AUTH_ID',values='ACCESS').fillna(''),
     'acl':         lambda r,index: r.datasets.loc[index].acl(),
@@ -56,18 +62,22 @@ entity_actions = {
     'acl resolve': lambda r,index: r.datasets.loc[index].acl(resolve=True)
     },
 'general resource': {
+    'details': lambda r,index: r.generals.loc[index].stripPrefix().T,
     'permits':     join_general_permits,
     'access matrix': lambda r,index: r.generals.loc[index].acl().pivot(index=['CLASS_NAME','NAME'],columns='AUTH_ID',values='ACCESS').fillna(''),
     'acl':         lambda r,index: r.generals.loc[index].acl(),
     'acl explode': lambda r,index: r.generals.loc[index].acl(explode=True),
     'acl resolve': lambda r,index: r.generals.loc[index].acl(resolve=True),
+    },
+'system profile': {
+        'details': lambda table,index: table.loc[index].stripPrefix().T,
     }
 }
 
 entity_action_names = {e:[''] for e in entity_actions.keys()}
 _ = [entity_action_names[e].extend([a for a in entity_actions[e].keys()]) for e in entity_actions.keys()]
 
-def action_driver(r,entity,index,action):
+def action_driver(r,entity,index,action,table=None):
     '''multi page action module
 
     args:
@@ -81,9 +91,15 @@ def action_driver(r,entity,index,action):
     '''
     print(entity,action,index)
     if action in entity_actions[entity]:
-        df = entity_actions[entity][action](r,index)
+        if table is None: # action picks the right table(s)
+            df = entity_actions[entity][action](r,index)
+        else: # system table selected by main app
+            df = entity_actions[entity][action](table,index)
         if isinstance(df,pd.DataFrame) and hasattr(df,'_fieldPrefix'):
-            columns = [c for c in df.columns if c.find('RECORD_TYPE')==-1]
-            df = df.reset_index(drop=True)[columns]
+            if 'RECORD_TYPE' in df.columns:
+                columns = [c for c in df.columns if c.find('RECORD_TYPE')==-1]
+                df = df.reset_index(drop=True)[columns]
+            elif 'RECORD_TYPE' in df.index:
+                df = df.drop('RECORD_TYPE')
         return df
 
