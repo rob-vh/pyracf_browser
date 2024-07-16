@@ -1,4 +1,5 @@
 import pandas as pd
+from utils import connectAttributes
 
 def join_connect_groups_for_users(r,index):
     return list(index)+list([g for g in r.connects.loc[(slice(None),index),].droplevel(1).index])
@@ -32,12 +33,16 @@ def join_general_permits(r,index):
 
 entity_actions = {
 'group': {
-    'connects': lambda r,index: r.connectData.find(index),
+    'connects': lambda r,index: r.connectData.find(index).stripPrefix().pipe(connectAttributes),
+    'connect matrix': lambda r,index: r.connectData.find(index).stripPrefix().pipe(connectAttributes).pivot(index='GRP_ID',columns='NAME',values='attribs').fillna(''),
+    'connect matrix T': lambda r,index: r.connectData.find(index).stripPrefix().pipe(connectAttributes).pivot(index='NAME',columns='GRP_ID',values='attribs').fillna(''),
     'permits on data sets': lambda r,index: join_dataset_permits_for_id(r,index),
     'permits on general resources': lambda r,index: join_general_permits_for_id(r,index),
     },
 'user':  {
-    'connects': lambda r,index: r.connectData.loc[(slice(None),index),],
+    'connects': lambda r,index: r.connectData.loc[(slice(None),index),].stripPrefix().pipe(connectAttributes),
+    'connect matrix': lambda r,index: r.connectData.loc[(slice(None),index),].stripPrefix().pipe(connectAttributes).pivot(index='NAME',columns='GRP_ID',values='attribs').fillna(''),
+    'connect matrix T': lambda r,index: r.connectData.loc[(slice(None),index),].stripPrefix().pipe(connectAttributes).pivot(index='GRP_ID',columns='NAME',values='attribs').fillna(''),
     'permits on data sets': lambda r,index: join_dataset_permits_for_id(r,index),
     'permits on general resources': lambda r,index: join_general_permits_for_id(r,index),
     'data sets in scope': lambda r,index: join_dataset_permits_for_id(r,join_connect_groups_for_users(r,index)).acl(resolve=True).find(user=index),
@@ -45,12 +50,14 @@ entity_actions = {
     },
 'dataset': {
     'permits':     join_dataset_permits,
+    'access matrix': lambda r,index: r.datasets.loc[index].acl().pivot(index='NAME',columns='AUTH_ID',values='ACCESS').fillna(''),
     'acl':         lambda r,index: r.datasets.loc[index].acl(),
     'acl explode': lambda r,index: r.datasets.loc[index].acl(explode=True),
     'acl resolve': lambda r,index: r.datasets.loc[index].acl(resolve=True)
     },
 'general resource': {
     'permits':     join_general_permits,
+    'access matrix': lambda r,index: r.generals.loc[index].acl().pivot(index=['CLASS_NAME','NAME'],columns='AUTH_ID',values='ACCESS').fillna(''),
     'acl':         lambda r,index: r.generals.loc[index].acl(),
     'acl explode': lambda r,index: r.generals.loc[index].acl(explode=True),
     'acl resolve': lambda r,index: r.generals.loc[index].acl(resolve=True),

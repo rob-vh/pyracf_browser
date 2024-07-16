@@ -1,5 +1,11 @@
 pyracf_path = "/home/rob/Documents/henri/pyracf-dev-0.9/src/"
-unload = "/home/rob/Documents/henri/synthetic.unload"
+
+[racf]
+# parameters that are accepted by RACF( ) instantiator
+irrdbu00 = "/home/rob/Documents/henri/synthetic.unload"
+pickles = "/tmp"
+auto_pickles = 1
+prefix = "app_"
 
 [track]
 # time = "comment this line to stop track messages"

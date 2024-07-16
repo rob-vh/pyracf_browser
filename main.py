@@ -40,12 +40,12 @@ def get_RACF(*args,**kwds):
         sys.path.insert(1,config['pyracf_path'])
 
     from pyracf import RACF
-    r = RACF(*args,**kwds)
+    r = RACF(*args,**kwds,**config['racf'])
     r.parse()
     while r._state != RACF.STATE_READY:
         time.sleep(0.5)
     return r
-r = get_RACF(config['unload'])
+r = get_RACF()
 
 from field_spec import entity_key_selector, entity_data_selector, segment_getter, system_profile_getter
 from action_spec import entity_action_names, action_driver
@@ -71,6 +71,8 @@ select_frame = st.sidebar
 header = st.container()
 output_frame = st.container()
 input_table = ''
+select_datafields = {}
+skip_datafields = {}
 
 with select_frame:
     track('top of loop')
@@ -93,9 +95,9 @@ with select_frame:
                     input_table = input_tables[st.radio('Select table',input_tables.keys())]
                     select_keys.append(None)
             else:
-                if type(fields) == str:
+                if isinstance(fields,str):
                     fieldname = fields
-                elif type(fields) == list:
+                elif isinstance(fields,list):
                     fieldname = st.radio('How to select',fields,key=select_entity+'_pattern_or_match_'+str(i))
                 if fieldname.find('match')!=-1:
                     select_datafields['match']=MaybeUpper(st.text_input(fieldname,key=select_entity+'_match_value_'+str(i),help='Enter fully qualified name without quotes'))
@@ -184,8 +186,6 @@ with select_frame:
                 rubbish = ['RECORD_TYPE','NAME','CLASS_NAME','CLASS']
                 columns = [c for c in r.table(input_table).columns if c.split('_',1)[1] not in rubbish]
             hide_columns = [c for a,b,c in [c.split('_',1)+[c] for c in r.table(input_table).columns] if a==input_table and b in rubbish]
-            select_datafields = {}
-            skip_datafields = {}
 
             if len(query_segments)==1:
                 show_segment = True
@@ -254,6 +254,8 @@ for p in query_segments.values():
             columns.extend([c for c in needed_columns if c not in columns])
         else:
             columns = p['columns']
+        if 'match' in columns:
+            columns = [c for c in columns if c!='match']+[p['table']+'_NAME']
         if input_table=='':  # first useful table
             input_table = p['table']
             df = r.table(p['table'])[columns]
@@ -276,14 +278,15 @@ track('frame ready')
 @st.experimental_dialog('action results',width='large')
 def action_frame(df,frame):
     selected_rows = df.iloc[frame['selection']['rows']].index
-    print(selected_rows)
+    # print(selected_rows)
     if len(selected_rows)==1:
         profiles = selected_rows[0]
-    elif selected_rows.ndim==1:
-        profiles = ','.join(selected_rows)
+        if isinstance(profiles,tuple):
+            profiles = ': '.join(profiles)
     else:
-        profiles = 'selected profiles'
-    action = st.selectbox('Select action for '+profiles, entity_action_names[select_entity],key='action_select')
+        keyNum = len(selected_rows.names) - 1
+        profiles = ', '.join(selected_rows.get_level_values(keyNum)).replace('*','\*')
+    action = st.selectbox('Select action for '+profiles, entity_action_names[select_entity],key=select_entity+'_action_select')
     if action:
         result = action_driver(r, select_entity, selected_rows, action)
         if isinstance(result,pd.DataFrame):
@@ -306,6 +309,6 @@ with output_frame:
         frame = st.dataframe(df, on_select="rerun", selection_mode="multi-row", use_container_width=True)
         if select_entity in entity_action_names:
             go_action = st.button('Select one or more table rows and press button')
-        if go_action and len(frame['selection']['rows'])>0:
-            action_frame(df,frame)
+            if go_action and len(frame['selection']['rows'])>0:
+                action_frame(df,frame)
 
