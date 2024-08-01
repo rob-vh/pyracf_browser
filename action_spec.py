@@ -89,7 +89,7 @@ def action_driver(r,entity,index,action,table=None):
     returns:
         data frame
     '''
-    print(entity,action,index)
+    # print(entity,action,index)
     if action in entity_actions[entity]:
         if table is None: # action picks the right table(s)
             df = entity_actions[entity][action](r,index)

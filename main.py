@@ -22,6 +22,8 @@ def get_config():
         c['track']['time'] = False
     else:
         c['track']['time'] = time.time()
+    if 'irrdbu00' not in c and 'unload' in c:
+        c['irrdbu00'] = c['unload']
     return c
 config = get_config()
 
@@ -275,7 +277,8 @@ for p in query_segments.values():
 track('frame ready')
 
 # dialog window for actions on selected profiles
-@st.experimental_dialog('action results',width='large')
+#@st.dialog('action results',width='large')   # dialog shows a (smaller) modal window
+@st.fragment  # fragment shows up below the button, but supports "full screen"
 def action_frame(df,frame):
     selected_rows = df.iloc[frame['selection']['rows']].index
     # print(selected_rows)
